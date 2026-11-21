@@ -81,6 +81,13 @@ def _html_styles() -> str:
   #theme-wrap button { flex: 1; background: var(--bg); color: var(--text-2); border: 1px solid var(--input-border); border-radius: 4px; padding: 3px 0; font-size: 11px; cursor: pointer; }
   #theme-wrap button:hover { color: var(--text); }
   #theme-wrap button[aria-pressed="true"] { background: #4E79A7; border-color: #4E79A7; color: #fff; }
+ 
+ #save-html-btn { margin-left: auto; background: #4E79A7; color: #fff; border: 1px solid #4E79A7; border-radius: 4px; padding: 2px 7px; font-size: 11px; cursor: pointer; }
+#save-html-btn:hover { opacity: 0.9; }
+#reset-view-btn { background: var(--bg); color: var(--text-2); border: 1px solid var(--input-border); border-radius: 4px; padding: 2px 7px; font-size: 11px; cursor: pointer; }
+#reset-view-btn:hover { color: var(--text); border-color: #4E79A7; }
+
+
 </style>"""
 
 def _hyperedge_script(hyperedges_json: str) -> str:
@@ -462,6 +469,95 @@ LEGEND.forEach(c => {{
   }};
   legendEl.appendChild(item);
 }});
+
+
+
+
+
+const STATE_KEY = 'graphify-state:' + window.location.pathname;
+function getCurrentStateObj() {{
+  network.storePositions();
+  return {{
+    hidden: Array.from(hiddenCommunities),
+    positions: network.getPositions(),
+    view: {{ position: network.getViewPosition(), scale: network.getScale() }}
+  }};
+}}
+function saveGraphState() {{
+  try {{
+    localStorage.setItem(STATE_KEY, JSON.stringify(getCurrentStateObj()));
+  }} catch (e) {{}}
+}}
+
+function exportSavedHtml() {{
+  const stateJson = JSON.stringify(getCurrentStateObj());
+  const clone = document.documentElement.cloneNode(true);
+  const gDiv = clone.querySelector('#graph');
+  if (gDiv) gDiv.innerHTML = '';
+  const lDiv = clone.querySelector('#legend');
+  if (lDiv) lDiv.innerHTML = '';
+  const oldTag = clone.querySelector('#embedded-graph-state');
+  if (oldTag) oldTag.remove();
+  const s = document.createElement('script');
+  s.id = 'embedded-graph-state';
+  s.textContent = 'window.__EMBEDDED_STATE__ = ' + stateJson + ';';
+  clone.querySelector('body').appendChild(s);
+  const docHtml = '<!DOCTYPE html>' + clone.outerHTML;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([docHtml], {{ type: 'text/html;charset=utf-8' }}));
+  a.download = 'graph-layout.html';
+  a.click();
+}}
+
+
+function resetSavedView() {{
+  try {{ localStorage.removeItem(STATE_KEY); }} catch (e) {{}}
+  window.location.reload();
+}}
+function restoreGraphState() {{
+  let st = window.__EMBEDDED_STATE__ || null;
+  if (!st) {{
+    let raw = null;
+    try {{ raw = localStorage.getItem(STATE_KEY); }} catch (e) {{}}
+    if (!raw) return;
+    try {{ st = JSON.parse(raw); }} catch (e) {{ return; }}
+  }}
+  try {{
+    if (Array.isArray(st.hidden)) {{
+      const hSet = new Set(st.hidden);
+      hiddenCommunities.clear();
+      document.querySelectorAll('#legend .legend-item').forEach((item, idx) => {{
+        const c = LEGEND[idx];
+        if (!c) return;
+        const cb = item.querySelector('.legend-cb');
+        const isHidden = hSet.has(c.cid);
+        if (cb) cb.checked = !isHidden;
+        if (isHidden) {{ hiddenCommunities.add(c.cid); item.classList.add('dimmed'); }}
+        else {{ item.classList.remove('dimmed'); }}
+      }});
+      nodesDS.update(RAW_NODES.map(n => ({{ id: n.id, hidden: hSet.has(n.community) }})));
+      updateSelectAllState();
+    }}
+    if (st.positions) {{
+      const posUpdates = Object.keys(st.positions)
+        .filter(id => nodesDS.get(id))
+        .map(id => ({{ id, x: st.positions[id].x, y: st.positions[id].y }}));
+      if (posUpdates.length) nodesDS.update(posUpdates);
+    }}
+    if (st.view && st.view.position && st.view.scale) {{
+      network.moveTo({{ position: st.view.position, scale: st.view.scale, animation: false }});
+    }}
+  }} catch (e) {{}}
+}}
+
+network.once('stabilizationIterationsDone', () => {{
+  restoreGraphState();
+}});
+network.on('dragEnd', saveGraphState);
+network.on('zoom', saveGraphState);
+document.getElementById('legend-wrap').addEventListener('change', () => setTimeout(saveGraphState, 0));
+
+
 </script>"""
 
 
@@ -770,6 +866,11 @@ def to_html(
     <h3>Communities</h3>
     <div id="legend-controls">
       <label><input type="checkbox" id="select-all-cb" checked onchange="toggleAllCommunities(!this.checked)">Select All</label>
+      
+      <button type="button" id="save-html-btn" onclick="exportSavedHtml()">Save HTML</button>
+      <button type="button" id="reset-view-btn" onclick="resetSavedView()">Reset</button>
+
+
     </div>
     <div id="legend"></div>
   </div>

@@ -46,11 +46,12 @@ Type `/graphify` in your AI coding assistant and it maps your entire project (co
 > [!NOTE]
 > **Want this always-on?** [Graphify Cloud](https://app.graphify.com/signup?utm_source=github&utm_medium=readme&utm_campaign=oss) keeps the graph live across your entire SDLC: monorepo and cross-repo support, formal verification, and code review with a bird's-eye view of your SDLC, plus connectors for Sentry, Jira, and more so incidents and tickets sit in the same graph as your code. **[Start free, no card required](https://app.graphify.com/signup?utm_source=github&utm_medium=readme&utm_campaign=oss)**.
 
+ **Human-friendly fork (`Genhir/graphify`):** adds persistent community filters, manual node layout & camera state in `localStorage`, plus **`Save HTML`** (standalone snapshot export) and **`Reset`** buttons. See [FORK_CHANGES.md](FORK_CHANGES.md).
+
+![Interactive graph.html with Save HTML and Reset controls](docs/fork-ui-preview.png)
+
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Graphify-Labs/graphify/v8/docs/graph-hero.png" alt="graphify's interactive graph.html showing the FastAPI codebase as a force-directed knowledge graph with a legend of detected subsystems" width="900">
-</p>
-<p align="center">
-  <em>The FastAPI codebase mapped by graphify. Every node is a concept, colors are detected subsystems, and the whole thing is clickable in graph.html.</em>
+  <em>Custom PHP framework mapped with filtered communities, manual layout, and Save HTML / Reset controls.</em>
 </p>
 
 **Get started** (30 seconds). Needs Python 3.11.5–3.14 and uv (or pipx):
